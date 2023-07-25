@@ -1,0 +1,18 @@
+
+
+spring:
+  application:
+    name: RedditVideoGenerator
+  jpa:
+    database-platform: org.hibernate.dialect.PostgreSQLDialect
+    properties:
+      hibernate.jdbc.time_zone: UTC
+    show-sql: true
+  flyway:
+    locations: classpath:flyway
+  datasource:
+    platform: postgres
+    url: jdbc:postgresql://localhost:5432/place
+    username: postgres
+    password: 
+    driverClassName: org.postgresql.Driver

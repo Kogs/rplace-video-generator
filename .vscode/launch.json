@@ -1,0 +1,16 @@
+{
+    "configurations": [
+        {
+            "type": "java",
+            "name": "RedditVideoGenerator",
+            "request": "launch",
+            "cwd": "${workspaceFolder}",
+            "console": "internalConsole",
+            "mainClass": "de.thehardcoders.reddit.PlaceApplication",
+            "projectName": "",
+            "env": {
+                "spring_profiles_active": "dev"
+            }
+        }
+    ]
+}
