@@ -11,10 +11,9 @@ create table place_pixel (
     x int,
     y int,
     color int,
-    user_id varchar,
-    primary key (timestamp, x, y)
+    user_id varchar
 ) partition by range (timestamp);
-create index place_pixel_coordinate_idx on place_pixel (x,y);
+create index place_pixel_coordinate_idx on place_pixel (x, y, timestamp);
 
 /* TODO: create partitions automaticly when importing ? */
 create table place_pixel_22_01 partition of place_pixel 

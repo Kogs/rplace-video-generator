@@ -1,4 +1,4 @@
-package de.thehardcoders.reddit.data.entity;
+package de.thehardcoders.reddit.pixel.entity;
 
 import java.io.Serializable;
 import java.time.Instant;
@@ -15,13 +15,14 @@ import lombok.EqualsAndHashCode;
 @Table(name = "place_pixel")
 @EqualsAndHashCode(onlyExplicitlyIncluded = true)
 public class PlacePixel {
-    
+
     @Data
     @Embeddable
     public static class PlacePixelId implements Serializable {
         private Instant timestamp;
         private int x;
         private int y;
+        private String userId;
     }
 
     @EmbeddedId
@@ -29,8 +30,6 @@ public class PlacePixel {
     private PlacePixelId id;
 
     private int color;
-
-    private String userId;
 
     public int getX() {
         return id.x;

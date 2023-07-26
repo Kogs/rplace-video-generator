@@ -39,7 +39,7 @@ do
                 split_part(i.coordinate, ',', 2)::int as y, \
                 hex_to_int(i.pixel_color) as color, \
                 i.user_id \
-            from place_import i on conflict do nothing; \
+            from place_import i; \
             truncate table place_import;"
     if [ $? -ne 0 ]; then
         echo "Pixel data imported: ❌ failed"

@@ -1,6 +1,5 @@
 package de.thehardcoders.reddit.video;
 
-import java.time.Duration;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.Collection;
@@ -16,8 +15,8 @@ import org.opencv.videoio.VideoWriter;
 import org.springframework.stereotype.Service;
 
 import de.thehardcoders.reddit.api.dto.VideoRequestDto;
-import de.thehardcoders.reddit.data.PixelService;
-import de.thehardcoders.reddit.data.entity.PlacePixel;
+import de.thehardcoders.reddit.pixel.PixelService;
+import de.thehardcoders.reddit.pixel.entity.PlacePixel;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
