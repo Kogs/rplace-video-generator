@@ -2,6 +2,7 @@ package de.thehardcoders.reddit.api.dto;
 
 import java.time.Instant;
 
+
 import lombok.Data;
 
 @Data
@@ -18,5 +19,9 @@ public class VideoRequestDto {
     private int scale;
 
     private int videoLenghtSeconds;
+
+    private String filename;
+
+    private int fps = 30;
 
 }
