@@ -2,12 +2,14 @@
 
 PSQL="$PSQL_HOME/psql"
 
-URL=https://placedata.reddit.com/data/canvas-history/
+URL=https://placedata.reddit.com/data/canvas-history/2023/
 
-for i in {00..78}
+#https://placedata.reddit.com/data/canvas-history/2023/2023_place_canvas_history-000000000000.csv.gzip
+
+for i in {00..52}
 do  
     echo "Step: $i"
-    DOWNLOAD_FILE="2022_place_canvas_history-0000000000$i.csv.gzip"
+    DOWNLOAD_FILE="2023_place_canvas_history-0000000000$i.csv.gzip"
     DOWNLOAD_URL=${URL}${DOWNLOAD_FILE}
     FILE=files/$DOWNLOAD_FILE
 
@@ -20,7 +22,7 @@ do
 
     echo "Copy csv into import table"
     "$PSQL" -U postgres -d place \
-        -c "\copy place_import(timestamp, user_id, pixel_color, coordinate) \
+        -c "\copy place_import(timestamp, user_id, coordinate, pixel_color) \
         from program 'gzip -dc $FILE' \
         delimiter ',' CSV HEADER;"
     if [ $? -ne 0 ]; then
@@ -39,7 +41,7 @@ do
                 split_part(i.coordinate, ',', 2)::int as y, \
                 hex_to_int(i.pixel_color) as color, \
                 i.user_id \
-            from place_import i; \
+            from place_import i where i.coordinate not like '{%'; \
             truncate table place_import;"
     if [ $? -ne 0 ]; then
         echo "Pixel data imported: ❌ failed"
