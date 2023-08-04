@@ -12,11 +12,15 @@ public class VideoRequestDto {
 
     private Instant to;
 
-    private Range x;
+    private int x;
 
-    private Range y;
+    private int y;
 
-    private int scale;
+    private Resolution resolution;
+
+    private boolean vertical;
+
+    private double scale;
 
     private int videoLenghtSeconds;
 

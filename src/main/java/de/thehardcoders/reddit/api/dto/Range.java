@@ -12,6 +12,7 @@ public class Range {
 
     private int min;
     private int max;
+
     public int size() {
         return Math.abs(max - min);
     }

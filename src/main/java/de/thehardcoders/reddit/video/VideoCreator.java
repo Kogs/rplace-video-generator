@@ -16,6 +16,7 @@ import org.opencv.imgproc.Imgproc;
 import org.opencv.videoio.VideoWriter;
 
 import de.thehardcoders.reddit.OpenCVUtils;
+import de.thehardcoders.reddit.api.dto.Range;
 import de.thehardcoders.reddit.api.dto.VideoRequestDto;
 import de.thehardcoders.reddit.pixel.PixelService;
 import de.thehardcoders.reddit.pixel.entity.PlacePixel;
@@ -29,6 +30,10 @@ public class VideoCreator implements Closeable {
     private final VideoWriter writer;
 
     private final VideoRequestDto request;
+
+    private final Range x;
+
+    private final Range y;
 
     private final Size size;
 
@@ -46,8 +51,20 @@ public class VideoCreator implements Closeable {
         this.request = request;
         this.fps = this.request.getFps();
         this.outputFile = request.getFilename();
-        this.size = new Size(request.getX().size(), request.getY().size());
-        this.scaledSize = new Size(size.width * request.getScale(), size.height *  request.getScale());
+        if (!request.isVertical()) {
+            this.scaledSize = new Size(request.getResolution().getWidth(), request.getResolution().getHeight());
+        } else {
+            this.scaledSize = new Size(request.getResolution().getHeight(), request.getResolution().getWidth());
+        }
+        this.size = new Size(
+             this.scaledSize.width / request.getScale(),
+            this.scaledSize.height / request.getScale()
+        );
+        int halfWidth = (int) size.width / 2;
+        int halfHeight = (int) size.height / 2;
+        this.x = new Range(request.getX() - halfWidth, request.getX() + halfWidth);
+        this.y = new Range(request.getY() - halfHeight, request.getY() + halfHeight);
+
         this.writer = new VideoWriter(
             outputFile, 
             VideoWriter.fourcc('h', '2', '6', '2'),
@@ -59,7 +76,7 @@ public class VideoCreator implements Closeable {
 
     public void generate() {
         log.info("Read first frame data");
-        byte[] firstFrameData = pixelService.getFrameAt(request.getFrom(), request.getX(), request.getY());
+        byte[] firstFrameData = pixelService.getFrameAt(request.getFrom(), x, y);
         Mat frame = toFrame(size, firstFrameData);
 
         long seconds = ChronoUnit.SECONDS.between(request.getFrom(), request.getTo());
@@ -79,14 +96,14 @@ public class VideoCreator implements Closeable {
             currentTime = currentTime.plusSeconds(realSecondsPerFrame);
             // will be faster if multiple frames are geather by once.
             readWatch.resume();
-            Collection<PlacePixel> pixels = pixelService.getChangedPixels(lastFrame, currentTime, request.getX(), request.getY());
+            Collection<PlacePixel> pixels = pixelService.getChangedPixels(lastFrame, currentTime, this.x, this.y);
             readWatch.suspend();
 
             writeWatch.resume();
             // TODO: maybe its faster to fetch the full color data first
             for (PlacePixel pixel : pixels) {
-                int x = pixel.getX() - request.getX().getMin();
-                int y = pixel.getY() - request.getY().getMin();
+                int x = pixel.getX() - this.x.getMin();
+                int y = pixel.getY() - this.y.getMin();
                 frame.put(y, x, pixelService.toRgb(pixel.getColor()));
             }
             writeFrame(scaledSize, frame, currentTime);
@@ -101,6 +118,8 @@ public class VideoCreator implements Closeable {
     private void writeFrame(Size scaledSize, Mat frame, Instant currentTime) {
         Mat frameToWrite = resize(frame, scaledSize);
         addTextWithBackground(frameToWrite, new Point(5, frameToWrite.size().height - 10), currentTime.toString());
+        addTextWithBackground(frameToWrite, new Point(frameToWrite.size().width - 290, frameToWrite.size().height - 10), "yt/@RPlaceShorts");
+
         writer.write(frameToWrite);
     }
 
@@ -112,7 +131,7 @@ public class VideoCreator implements Closeable {
 
     private Mat resize(Mat frame, Size targetSize) {
         Mat scaledFrame = new Mat(targetSize, CvType.CV_8UC3);
-        Imgproc.resize(frame, scaledFrame, targetSize, 0,0 , Imgproc.INTER_AREA);
+        Imgproc.resize(frame, scaledFrame, targetSize, 0, 0, Imgproc.INTER_AREA);
         return scaledFrame;
     }
 
