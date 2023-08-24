@@ -57,8 +57,8 @@ public class VideoCreator implements Closeable {
             this.scaledSize = new Size(request.getResolution().getHeight(), request.getResolution().getWidth());
         }
         this.size = new Size(
-            this.scaledSize.width / request.getScale(),
-            this.scaledSize.height / request.getScale()
+            Math.floor(this.scaledSize.width / request.getScale()),
+            Math.floor(this.scaledSize.height / request.getScale())
         );
         int halfWidth = (int) size.width / 2;
         int halfHeight = (int) size.height / 2;
@@ -75,8 +75,7 @@ public class VideoCreator implements Closeable {
             true
         );
         log.info("Read first frame data");
-        byte[] firstFrameData = pixelService.getFrameAt(request.getFrom(), x, y);
-        Mat frame = toFrame(size, firstFrameData);
+        Mat frame = pixelService.getFrameAt(request.getFrom(), x, y);
 
         long seconds = ChronoUnit.SECONDS.between(request.getFrom(), request.getTo());
         long frames = request.getVideoLenghtSeconds() * fps;
@@ -117,8 +116,7 @@ public class VideoCreator implements Closeable {
         log.info("Generate Preview Frame");
         long seconds = ChronoUnit.SECONDS.between(request.getFrom(), request.getTo());
         Instant previewTime = request.getFrom().plusSeconds((long)(seconds * progressPercentage));
-        byte[] firstFrameData = pixelService.getFrameAt(previewTime, x, y);
-        Mat frame = toFrame(size, firstFrameData);
+        Mat frame = pixelService.getFrameAt(previewTime, x, y);
         return postProcess(scaledSize, frame, previewTime);
     }
 
@@ -127,12 +125,6 @@ public class VideoCreator implements Closeable {
         addTextWithBackground(frameToWrite, new Point(5, frameToWrite.size().height - 10), currentTime.toString());
         addTextWithBackground(frameToWrite, new Point(frameToWrite.size().width - 290, frameToWrite.size().height - 10), "yt/@RPlaceShorts");
         return frameToWrite;
-    }
-
-    private Mat toFrame(Size size, byte[] bytes) {
-        Mat frame = new Mat(size, CvType.CV_8UC3);
-        frame.put(0, 0, bytes);
-        return frame;
     }
 
     private Mat resize(Mat frame, Size targetSize) {

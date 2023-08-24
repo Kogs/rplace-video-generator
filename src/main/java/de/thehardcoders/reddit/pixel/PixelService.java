@@ -1,6 +1,7 @@
 package de.thehardcoders.reddit.pixel;
 
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Map;
@@ -8,13 +9,22 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import org.apache.commons.lang3.tuple.Pair;
+import org.opencv.core.CvType;
+import org.opencv.core.Mat;
+import org.opencv.core.Point;
+import org.opencv.core.Rect;
+import org.opencv.core.Scalar;
+import org.opencv.core.Size;
+import org.opencv.imgproc.Imgproc;
 import org.springframework.stereotype.Service;
 
 import de.thehardcoders.reddit.api.dto.Range;
 import de.thehardcoders.reddit.pixel.entity.PlacePixel;
 import de.thehardcoders.reddit.pixel.repository.PlacePixelRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class PixelService {
@@ -25,41 +35,27 @@ public class PixelService {
         return this.repository.findChangedInRange(start, end, x.getMin(), x.getMax(), y.getMin(), y.getMax());
     }
 
-    public byte[] getFrameAt(Instant time, Range xRange, Range yRange) {
+    public Mat getFrameAt(Instant time, Range xRange, Range yRange) {
         Collection<PlacePixel> frame = this.repository.findFullFrameAt(
             time,
             xRange.getMin(), xRange.getMax(),
             yRange.getMin(), yRange.getMax()
         );
+        //Collection<PlacePixel> frame = new ArrayList<>();
         return toRgb(frame, xRange.size(), yRange.size(), xRange.getMin(), yRange.getMin());
     }
 
-    public byte[] toRgb(Collection<PlacePixel> pixels, int width, int height, int xOffset, int yOffset) {
-        Map<Pair<Integer, Integer>, PlacePixel> map = pixels.stream().collect(Collectors.toMap(
-            (p) -> Pair.of(
-                p.getX() - xOffset,
-                p.getY() - yOffset
-            ),
-            Function.identity())
-        );
-      
-        byte[] data = new byte[width * height * 3];
+    public Mat toRgb(Collection<PlacePixel> pixels, int width, int height, int xOffset, int yOffset) {
+        log.info("toRgb: {}x{} {}x{}", width, height, xOffset, yOffset);
 
-        for (int i = 0; i < data.length; i += 3) {
-            int index = i / 3;
-
-            int x = index % width;
-            int y = index / width;
-            PlacePixel placePixel = map.get(Pair.of(x, y));
-
-            if (placePixel != null) {
-                putPixel(data, i, toRgb(placePixel.getColor()));
-            } else {
-                putPixel(data, i, new byte[]{ (byte)255 , (byte)255, (byte)255});
-            }
+        Mat frame = new Mat(new Size(width, height), CvType.CV_8UC3);
+        Imgproc.rectangle(frame, new Point(0,0), new Point(width, height), Scalar.all(256), -1);
+        
+        for (PlacePixel pixel : pixels) {
+            frame.put(pixel.getY() - yOffset, pixel.getX() - xOffset, toRgb(pixel.getColor()));
         }
 
-        return data;
+        return frame;
     }
 
     public byte[] toRgb(int color) {
