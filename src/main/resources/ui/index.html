@@ -10,6 +10,11 @@
         .inputs div {
             margin-bottom: 10px;
         }
+
+        #preview {
+            transform-origin: top left;
+            border: solid black 1px;
+        }
     </style>
 </head>
 
@@ -97,34 +102,34 @@
     </form>
 
     <p>
-        <h4>Status</h4>
-        <span id="status"></span>
+    <h4>Status</h4>
+    <span id="status"></span>
     </p>
 
 
     <p>
-        <h4>Preview</h4>
+    <h4>Preview</h4>
 
-        <div>
-            <label for="zoom-slider">Zoom:</label>
-            <input type="range" id="zoom-slider" name="zoom" min="0" max="1" value="0.5" step="0.1">
-        </div>
-        <div>
-            <img id="preview" src="" alt="Preview" style="transform-origin: top left;">
-        </div>
-        <script>
-            const previewImage = document.getElementById('preview');
-            const zoomSlider = document.getElementById('zoom-slider');
-            zoomSlider.addEventListener('input', () => {
-                const zoom = zoomSlider.value;
-                previewImage.style.transform = `scale(${zoom})`;
-            });
-        </script>
+    <div>
+        <label for="zoom-slider">Zoom:</label>
+        <input type="range" id="zoom-slider" name="zoom" min="0" max="1" value="0.5" step="0.1">
+    </div>
+    <div>
+        <img id="preview" src="" alt="Preview">
+    </div>
+    <script>
+        const previewImage = document.getElementById('preview');
+        const zoomSlider = document.getElementById('zoom-slider');
+        zoomSlider.addEventListener('input', () => {
+            const zoom = zoomSlider.value;
+            previewImage.style.transform = `scale(${zoom})`;
+        });
+    </script>
     </p>
 
 
     <script>
-        const BACKEND = "http://localhost:8080/place";
+        const BACKEND = window.location.href;
 
         const form = document.getElementById('form');
         const status = document.getElementById('status');
@@ -152,8 +157,8 @@
                     body: JSON.stringify(getRequestData()),
                     headers: { 'Content-Type': 'application/json' }
                 });
-                status.textContent = "Video generated! -> " + response.data;
-            } catch(e) {
+                status.textContent = "Video generated! -> " + response.text();
+            } catch (e) {
                 status.textContent = "Error: " + e;
                 return;
             }
@@ -161,6 +166,7 @@
 
         async function loadPreview() {
             status.textContent = "Generating preview...";
+            storeFormData();
             const data = getRequestData();
             const preview = document.getElementById('preview');
             preview.src = "";
@@ -175,11 +181,22 @@
 
         form.addEventListener('submit', (event) => {
             event.preventDefault();
-            const data = getRequestData();
+            storeFormData();
             generateVideo();
         });
 
-
+        function restoreFormData() {
+            const formData = JSON.parse(localStorage.getItem('formData') || '{}');
+            for (const [name, value] of Object.entries(formData)) {
+                const input = form.elements[name];
+                if (input) input.value = value;
+            }
+        }
+        function storeFormData() {
+            console.log('storing form data');
+            localStorage.setItem('formData', JSON.stringify(Object.fromEntries(new FormData(form))));
+        }
+        restoreFormData();
     </script>
 
 
