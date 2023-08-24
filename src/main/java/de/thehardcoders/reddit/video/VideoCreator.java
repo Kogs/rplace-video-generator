@@ -27,8 +27,6 @@ public class VideoCreator implements Closeable {
 
     private final PixelService pixelService;
 
-    private final VideoWriter writer;
-
     private final VideoRequestDto request;
 
     private final Range x;
@@ -42,6 +40,8 @@ public class VideoCreator implements Closeable {
     private final String outputFile;
 
     private final int fps;
+
+    private VideoWriter writer;
 
     public VideoCreator(
         PixelService pixelService,
@@ -57,14 +57,16 @@ public class VideoCreator implements Closeable {
             this.scaledSize = new Size(request.getResolution().getHeight(), request.getResolution().getWidth());
         }
         this.size = new Size(
-             this.scaledSize.width / request.getScale(),
+            this.scaledSize.width / request.getScale(),
             this.scaledSize.height / request.getScale()
         );
         int halfWidth = (int) size.width / 2;
         int halfHeight = (int) size.height / 2;
         this.x = new Range(request.getX() - halfWidth, request.getX() + halfWidth);
         this.y = new Range(request.getY() - halfHeight, request.getY() + halfHeight);
+    }
 
+    public void generate() {
         this.writer = new VideoWriter(
             outputFile, 
             VideoWriter.fourcc('h', '2', '6', '2'),
@@ -72,9 +74,6 @@ public class VideoCreator implements Closeable {
             scaledSize,
             true
         );
-    }
-
-    public void generate() {
         log.info("Read first frame data");
         byte[] firstFrameData = pixelService.getFrameAt(request.getFrom(), x, y);
         Mat frame = toFrame(size, firstFrameData);
@@ -87,7 +86,7 @@ public class VideoCreator implements Closeable {
         Instant currentTime = request.getFrom();
         Instant lastFrame = currentTime;
         // write first frame
-        writeFrame(scaledSize, frame, request.getFrom());
+        writer.write(postProcess(scaledSize, frame, request.getFrom()));
 
         StopWatch writeWatch = StopWatch.createStarted(); writeWatch.suspend();
         StopWatch readWatch = StopWatch.createStarted(); readWatch.suspend();
@@ -106,7 +105,7 @@ public class VideoCreator implements Closeable {
                 int y = pixel.getY() - this.y.getMin();
                 frame.put(y, x, pixelService.toRgb(pixel.getColor()));
             }
-            writeFrame(scaledSize, frame, currentTime);
+            writer.write(postProcess(scaledSize, frame, currentTime));
             writeWatch.suspend();
 
             lastFrame = currentTime;
@@ -114,13 +113,20 @@ public class VideoCreator implements Closeable {
         log.info("Video created. Read: {}ms. Write {}ms", readWatch.getTime(), writeWatch.getTime());
     }
 
+    public Mat generatePreviewFrame(double progressPercentage) {
+        log.info("Generate Preview Frame");
+        long seconds = ChronoUnit.SECONDS.between(request.getFrom(), request.getTo());
+        Instant previewTime = request.getFrom().plusSeconds((long)(seconds * progressPercentage));
+        byte[] firstFrameData = pixelService.getFrameAt(previewTime, x, y);
+        Mat frame = toFrame(size, firstFrameData);
+        return postProcess(scaledSize, frame, previewTime);
+    }
 
-    private void writeFrame(Size scaledSize, Mat frame, Instant currentTime) {
+    private Mat postProcess(Size scaledSize, Mat frame, Instant currentTime) {
         Mat frameToWrite = resize(frame, scaledSize);
         addTextWithBackground(frameToWrite, new Point(5, frameToWrite.size().height - 10), currentTime.toString());
         addTextWithBackground(frameToWrite, new Point(frameToWrite.size().width - 290, frameToWrite.size().height - 10), "yt/@RPlaceShorts");
-
-        writer.write(frameToWrite);
+        return frameToWrite;
     }
 
     private Mat toFrame(Size size, byte[] bytes) {
@@ -151,8 +157,6 @@ public class VideoCreator implements Closeable {
             backgroundColor, -1);
         Imgproc.putText(frame, text, point, fontFace, fontscale, color, thickness);
     }
-
-
 
     @Override
     public void close() {

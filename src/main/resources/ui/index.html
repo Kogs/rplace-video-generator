@@ -1,0 +1,189 @@
+<html>
+
+<head>
+    <title>R/Place Video Generator</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+        }
+
+        .inputs div {
+            margin-bottom: 10px;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>Video Generator</h1>
+
+    <form id="form" class="inputs">
+        <div>
+            <label for="from">From:</label>
+            <input type="datetime-local" id="from" name="from" value="2023-07-20T13:00:00" timezone="UTC">
+
+            <datalist id="from-presets">
+                <option value="2023-07-20T13:00:00">Start</option>
+                <option value="2023-07-21T16:00:00">1 Expansian</option>
+                <option value="2023-07-22T08:00:00">2 Expansion</option>
+                <option value="2023-07-22T23:00:00">3 Expansion</option>
+                <option value="2023-07-23T18:00:00">4 Expansion</option>
+                <option value="2023-07-24T02:00:00">5 Expansion</option>
+            </datalist>
+            <script>
+                const fromInput = document.getElementById('from');
+                const fromPresets = document.getElementById('from-presets');
+                fromInput.setAttribute('list', 'from-presets');
+            </script>
+        </div>
+
+        <div>
+            <label for="to">To:</label>
+            <input type="datetime-local" id="to" name="to" value="2023-07-25T21:35:00" timezone="UTC">
+        </div>
+
+        <div>
+            <label for="x">X:</label>
+            <input type="number" id="x" name="x" value="925">
+        </div>
+
+        <div>
+            <label for="y">Y:</label>
+            <input type="number" id="y" name="y" value="-850">
+        </div>
+
+        <div>
+            <label for="resolution">Resolution:</label>
+            <select id="resolution" name="resolution">
+                <option value="FULL_HD" selected>FULL HD</option>
+                <option value="ULTRA_HD">ULTRA_HD</option>
+            </select>
+        </div>
+
+        <div>
+            <label for="vertical">Vertical:</label>
+            <input type="checkbox" id="vertical" name="vertical">
+        </div>
+
+        <div>
+            <label for="scale">Scale:</label>
+            <input type="number" id="scale" name="scale" value="7" step="0.1">
+        </div>
+
+        <div>
+            <label for="fps">FPS:</label>
+            <input type="range" id="fps" name="fps" min="5" max="60" value="30">
+            <span id="fps-value">30</span>
+            <script>
+                const fpsSlider = document.getElementById('fps');
+                const fpsValue = document.getElementById('fps-value');
+                fpsSlider.addEventListener('input', () => fpsValue.textContent = fpsSlider.value);
+            </script>
+        </div>
+
+        <div>
+            <label for="videoLenghtSeconds">Video Length (seconds):</label>
+            <input type="number" id="videoLenghtSeconds" name="videoLenghtSeconds" value="30">
+        </div>
+
+        <div>
+            <label for="filename">Filename:</label>
+            <input type="text" id="filename" name="filename" value=".mp4">
+        </div>
+
+        <div>
+            <button type="submit" id="generate-button">Generate Video</button>
+            <button type="button" id="preview-button" onclick="loadPreview()">Preview</button>
+        </div>
+    </form>
+
+    <p>
+        <h4>Status</h4>
+        <span id="status"></span>
+    </p>
+
+
+    <p>
+        <h4>Preview</h4>
+
+        <div>
+            <label for="zoom-slider">Zoom:</label>
+            <input type="range" id="zoom-slider" name="zoom" min="0" max="1" value="0.5" step="0.1">
+        </div>
+        <div>
+            <img id="preview" src="" alt="Preview" style="transform-origin: top left;">
+        </div>
+        <script>
+            const previewImage = document.getElementById('preview');
+            const zoomSlider = document.getElementById('zoom-slider');
+            zoomSlider.addEventListener('input', () => {
+                const zoom = zoomSlider.value;
+                previewImage.style.transform = `scale(${zoom})`;
+            });
+        </script>
+    </p>
+
+
+    <script>
+        const BACKEND = "http://localhost:8080/place";
+
+        const form = document.getElementById('form');
+        const status = document.getElementById('status');
+
+        function getRequestData() {
+            const formData = new FormData(form);
+            const data = Array.from(formData.entries()).reduce((acc, [key, value]) => {
+                acc[key] = value;
+                if (key === 'from' || key === 'to') {
+                    acc[key] = value + ':00.000Z'; // convert to iso
+                }
+                if (key === 'vertical') {
+                    acc[key] = value === 'on';
+                }
+                return acc;
+            }, {});
+            return data;
+        }
+
+        async function generateVideo() {
+            status.textContent = "Generating...";
+            try {
+                const response = await fetch(BACKEND + '/video', {
+                    method: 'POST',
+                    body: JSON.stringify(getRequestData()),
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                status.textContent = "Video generated! -> " + response.data;
+            } catch(e) {
+                status.textContent = "Error: " + e;
+                return;
+            }
+        }
+
+        async function loadPreview() {
+            status.textContent = "Generating preview...";
+            const data = getRequestData();
+            const preview = document.getElementById('preview');
+            preview.src = "";
+            const response = (await fetch(BACKEND + '/preview', {
+                method: 'POST',
+                body: JSON.stringify(getRequestData()),
+                headers: { 'Content-Type': 'application/json' }
+            })).blob();
+            preview.src = URL.createObjectURL(await response);
+            status.textContent = "Preview updated!";
+        }
+
+        form.addEventListener('submit', (event) => {
+            event.preventDefault();
+            const data = getRequestData();
+            generateVideo();
+        });
+
+
+    </script>
+
+
+
+</body>
+
+</html>
